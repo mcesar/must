@@ -37,7 +37,7 @@ To run:
 $ gotip run main.go
 ```
 
-## Documentation:
+## Documentation
 
 **func Do**
 ```go
