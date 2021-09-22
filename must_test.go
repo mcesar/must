@@ -3,6 +3,7 @@ package must
 import (
 	"errors"
 	"testing"
+	"time"
 )
 
 func TestDo(t *testing.T) {
@@ -28,12 +29,7 @@ func TestDo(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			x, err := func() (x int, err error) {
-				defer Handle(&err)
-				x = Do(nonNegativeOnly(test.x))
-				x = Do(nonPositiveOnly(test.x))
-				return x, nil
-			}()
+			x, err := withMustErrorHandling(test.x, 0)
 			if !test.err && x != test.x {
 				t.Errorf("expected %v, got %v", test.x, x)
 			}
@@ -42,6 +38,51 @@ func TestDo(t *testing.T) {
 			}
 		})
 	}
+}
+
+func BenchmarkMustErrorHandlingWithoutDelay(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		withMustErrorHandling(n, 0)
+	}
+}
+
+func BenchmarkRegularErrorHandlingWithoutDelay(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		withRegularErrorHandling(n, 0)
+	}
+}
+
+func BenchmarkMustErrorHandlingWith10msDelay(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		withMustErrorHandling(n, 10)
+	}
+}
+
+func BenchmarkRegularErrorHandlingWith10msDelay(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		withRegularErrorHandling(n, 10)
+	}
+}
+
+func withMustErrorHandling(a, delay int) (x int, err error) {
+	defer Handle(&err)
+	time.Sleep(time.Duration(delay) * time.Millisecond)
+	x = Do(nonNegativeOnly(a))
+	x = Do(nonPositiveOnly(a))
+	return x, nil
+}
+
+func withRegularErrorHandling(a, delay int) (x int, err error) {
+	time.Sleep(time.Duration(delay) * time.Millisecond)
+	x, err = nonNegativeOnly(a)
+	if err != nil {
+		return 0, err
+	}
+	x, err = nonPositiveOnly(a)
+	if err != nil {
+		return 0, err
+	}
+	return x, nil
 }
 
 func nonNegativeOnly(x int) (int, error) {
