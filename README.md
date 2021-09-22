@@ -37,6 +37,18 @@ To run:
 $ gotip run main.go
 ```
 
+Benchmarks:
+```sh
+$ gotip test -bench=.
+goos: darwin
+goarch: arm64
+pkg: github.com/mcesar/must
+BenchmarkMustErrorHandlingWithoutDelay-8       	 9594230	       114.1 ns/op
+BenchmarkRegularErrorHandlingWithoutDelay-8    	73931268	        15.71 ns/op
+BenchmarkMustErrorHandlingWith10msDelay-8      	     100	  11777532 ns/op
+BenchmarkRegularErrorHandlingWith10msDelay-8   	     100	  11590843 ns/op
+```
+
 ## Documentation
 
 **func Do**
