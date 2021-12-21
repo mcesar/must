@@ -6,17 +6,17 @@
 //      f := must.Do(os.Open("file"))
 //      defer f.close()
 //      // ...
-//  }  
+//  }
 package must
 
 import "fmt"
 
 // Do returns a or panics if err != nil
 func Do[A any](a A, err error) A {
-    if err != nil {
-        panic(err)
-    }
-    return a
+	if err != nil {
+		panic(err)
+	}
+	return a
 }
 
 // Do0 panics if err != nil
@@ -33,7 +33,6 @@ func Do2[A, B any](a A, b B, err error) (A, B) {
 	}
 	return a, b
 }
-
 
 // Handle sets err to recovered value if it is an error
 func Handle(err *error) {
@@ -54,8 +53,8 @@ func Handle(err *error) {
 // Handlef sets err to recovered value if it is an error,
 // wrapped according to the formatting string specified
 func Handlef(err *error, str string) {
-    Handle(err)
-    if err != nil && *err != nil {
-        *err = fmt.Errorf(str, err)
-    }
+	Handle(err)
+	if err != nil && *err != nil {
+		*err = fmt.Errorf(str, *err)
+	}
 }
