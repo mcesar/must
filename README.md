@@ -1,11 +1,5 @@
 # must
-Generic error handling with panic, recover, and defer.
-
-For now, it must be used with gotip:
-```sh
-$ go install golang.org/dl/gotip@latest
-$ gotip download
-```
+Generic error handling with panic, recover, and defer. Requires Go 1.18 or later.
 
 Usage:
 ```go
