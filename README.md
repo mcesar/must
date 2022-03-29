@@ -28,12 +28,12 @@ func f() (err error) {
 ```
 To run:
 ```sh
-$ gotip run main.go
+$ go run main.go
 ```
 
 Benchmarks:
 ```sh
-$ gotip test -bench=.
+$ go test -bench=.
 goos: darwin
 goarch: arm64
 pkg: github.com/mcesar/must
