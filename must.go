@@ -41,35 +41,33 @@ func Do2[A, B any](a A, b B, err error) (A, B) {
 	return a, b
 }
 
-// Handle sets pErr to recovered value if it is an error emitted inside of a Do call
-func Handle(pErr *error) {
+// Handle sets dest to recovered value if it is an error emitted inside of a Do call
+func Handle(dest *error) {
 	e := recover()
-	handle(pErr, e)
+	handle(dest, e)
 }
 
-func handle(pErr *error, e interface{}) {
-	switch {
-	case e == nil:
+func handle(dest *error, e interface{}) {
+	if e == nil {
 		return
-	default:
-		var errTyped wrappedError
-		if eError, ok := e.(error); ok && errors.As(eError, &errTyped) {
-			if pErr != nil {
-				*pErr = errTyped.error
-			}
-			return
+	}
+	var errTyped wrappedError
+	if eError, ok := e.(error); ok && errors.As(eError, &errTyped) {
+		if dest != nil {
+			*dest = errTyped.error
 		}
+		return
 	}
 	panic(e)
 }
 
 // Handlef sets err to recovered value if it is an error, wrapped according to
 // the formatting string specified
-func Handlef(pErr *error, str string) {
+func Handlef(dest *error, str string) {
 	e := recover()
-	handle(pErr, e)
-	if pErr != nil && *pErr != nil {
-		*pErr = fmt.Errorf(str, *pErr)
+	handle(dest, e)
+	if dest != nil && *dest != nil {
+		*dest = fmt.Errorf(str, *dest)
 	}
 }
 
