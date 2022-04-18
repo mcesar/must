@@ -2,9 +2,18 @@ package must
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
+	"runtime"
 	"testing"
 	"time"
 )
+
+type testErrorEmitFunc func(a, delay int) (x int, err error)
+
+func getFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
 
 func TestDo(t *testing.T) {
 	for _, test := range []struct {
@@ -28,15 +37,18 @@ func TestDo(t *testing.T) {
 			true,
 		},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			x, err := withMustErrorHandling(test.x, 0)
-			if !test.err && x != test.x {
-				t.Errorf("expected %v, got %v", test.x, x)
-			}
-			if (err != nil) != test.err {
-				t.Errorf("expected %v, got %v", test.err, err)
-			}
-		})
+		for _, f := range []testErrorEmitFunc{withMustErrorHandling, withMustErrorHandlingV2, withMustErrorHandlingV3} {
+			t.Run(test.name+fmt.Sprintf("(%s)", getFunctionName(f)), func(t *testing.T) {
+				x, err := f(test.x, 0)
+				if !test.err && x != test.x {
+					t.Errorf("expected %v, got %v", test.x, x)
+				}
+				if (err != nil) != test.err {
+					t.Errorf("expected %v, got %v", test.err, err)
+				}
+				t.Logf("%+v", err)
+			})
+		}
 	}
 }
 
@@ -72,6 +84,26 @@ func withMustErrorHandling(a, delay int) (x int, err error) {
 	return x, nil
 }
 
+func withMustErrorHandlingV2(a, delay int) (x int, rErr error) {
+	defer Handlef(&rErr, "error: %w")
+	time.Sleep(time.Duration(delay) * time.Millisecond)
+	x = Do(nonNegativeOnly(a))
+	x = Do(nonPositiveOnly(a))
+	return x, nil
+}
+
+func withMustErrorHandlingV3(a, delay int) (x int, rErr error) {
+	defer HandleFunc(func(err error) {
+		if err != nil {
+			rErr = fmt.Errorf("formatted: %+v", err)
+		}
+	})
+	time.Sleep(time.Duration(delay) * time.Millisecond)
+	x = Do(nonNegativeOnly(a))
+	x = Do(nonPositiveOnly(a))
+	return x, nil
+}
+
 func withRegularErrorHandling(a, delay int) (x int, err error) {
 	time.Sleep(time.Duration(delay) * time.Millisecond)
 	x, err = nonNegativeOnly(a)
@@ -97,4 +129,23 @@ func nonPositiveOnly(x int) (int, error) {
 		return 0, errors.New("must be negative")
 	}
 	return x, nil
+}
+
+func TestDo_RethrowsPanic(t *testing.T) {
+	err := func() (rErr error) {
+		defer func() {
+			e := recover()
+			if e == nil {
+				t.Errorf("panic must be rethrown")
+			}
+		}()
+		defer Handle(&rErr)
+		Do0(func() error {
+			panic(fmt.Errorf("some non-wrapped error"))
+		}())
+		return nil
+	}()
+	if err != nil {
+		t.Errorf("panic was interpreted as wrapped error")
+	}
 }

@@ -9,12 +9,19 @@
 //  }
 package must
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+type wrappedError struct{ error }
+
+func (w wrappedError) Unwrap() error { return w.error }
 
 // Do returns a or panics if err != nil
 func Do[A any](a A, err error) A {
 	if err != nil {
-		panic(err)
+		panic(wrappedError{err})
 	}
 	return a
 }
@@ -22,39 +29,52 @@ func Do[A any](a A, err error) A {
 // Do0 panics if err != nil
 func Do0(err error) {
 	if err != nil {
-		panic(err)
+		panic(wrappedError{err})
 	}
 }
 
 // Do2 returns a and b or panics if err != nil
 func Do2[A, B any](a A, b B, err error) (A, B) {
 	if err != nil {
-		panic(err)
+		panic(wrappedError{err})
 	}
 	return a, b
 }
 
-// Handle sets err to recovered value if it is an error
-func Handle(err *error) {
-	v := recover()
-	if v == nil {
-		return
-	}
-	if err == nil {
-		panic(v)
-	}
-	if e, ok := v.(error); ok && e != nil {
-		*err = e
-		return
-	}
-	panic(v)
+// Handle sets dest to recovered value if it is an error emitted inside of a Do call
+func Handle(dest *error) {
+	e := recover()
+	handle(dest, e)
 }
 
-// Handlef sets err to recovered value if it is an error,
-// wrapped according to the formatting string specified
-func Handlef(err *error, str string) {
-	Handle(err)
-	if err != nil && *err != nil {
-		*err = fmt.Errorf(str, *err)
+func handle(dest *error, e interface{}) {
+	if e == nil {
+		return
 	}
+	var errTyped wrappedError
+	if eError, ok := e.(error); ok && errors.As(eError, &errTyped) {
+		if dest != nil {
+			*dest = errTyped.error
+		}
+		return
+	}
+	panic(e)
+}
+
+// Handlef sets err to recovered value if it is an error, wrapped according to
+// the formatting string specified
+func Handlef(dest *error, str string) {
+	e := recover()
+	handle(dest, e)
+	if dest != nil && *dest != nil {
+		*dest = fmt.Errorf(str, *dest)
+	}
+}
+
+// HandleFunc recovers error and passes it to the handler function
+func HandleFunc(f func(err error)) {
+	var err error
+	e := recover()
+	handle(&err, e)
+	f(err)
 }
